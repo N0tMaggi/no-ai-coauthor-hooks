@@ -3,6 +3,69 @@
 z40=0000000000000000000000000000000000000000
 AI_PATTERN="^[[:space:]]*[Cc]o-[Aa]uthored-[Bb]y:[[:space:]]*.*(claude|anthropic|opus|sonnet|haiku|chatgpt|openai|copilot|gemini|deepseek|qwen)"
 
+# --- output helpers ------------------------------------------------------------
+# Colours only on a real terminal, plain text for logs, pipes and AI agents.
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    RED=$(printf '\033[31m'); BOLD_RED=$(printf '\033[1;31m'); YELLOW=$(printf '\033[1;33m')
+    BLUE=$(printf '\033[34m'); CYAN=$(printf '\033[36m'); RESET=$(printf '\033[0m')
+else
+    RED=; BOLD_RED=; YELLOW=; BLUE=; CYAN=; RESET=
+fi
+
+# visible length in characters, not bytes
+vlen() {
+    n=$(printf '%s' "$1" | LC_ALL=C.UTF-8 wc -m 2>/dev/null) || n=$(printf '%s' "$1" | wc -m)
+    echo $((n + 0))
+}
+
+repeat() {
+    printf "%${2}s" "" | sed "s/ /$1/g"
+}
+
+BODY=""
+add() {
+    BODY="$BODY$1	$2
+"
+}
+
+# Draws BODY in a rounded box titled $1; each BODY line is "<tag><TAB><text>":
+#   H heading, L source line ("3 │ text"), C caret line ("│ ^^^ note"), _ empty, P plain
+print_box() {
+    title=$1
+    title_len=$(vlen "$title")
+    width=$((title_len + 6))
+    while IFS= read -r entry; do
+        [ -z "$entry" ] && continue
+        w=$(( $(vlen "${entry#*	}") + 6 )) # border + 2 spaces on each side
+        [ "$w" -gt "$width" ] && width=$w
+    done <<EOF
+$BODY
+EOF
+    [ "$width" -lt 80 ] && width=80
+
+    echo ""
+    printf '%s╭─ %s%s%s %s╮%s\n' "$RED" "$BOLD_RED" "$title" "$RESET$RED" "$(repeat ─ $((width - title_len - 5)))" "$RESET"
+    while IFS= read -r entry; do
+        [ -z "$entry" ] && continue
+        tag=${entry%%	*}
+        text=${entry#*	}
+        [ "$tag" = "_" ] && text=""
+        pad=$((width - $(vlen "$text") - 4))
+        case $tag in
+            H) styled="$YELLOW$text$RESET" ;;
+            L) styled="$BLUE${text%%│*}│$RESET$CYAN${text#*│}$RESET" ;;
+            C) styled="$BLUE${text%%│*}│$RESET$BOLD_RED${text#*│}$RESET" ;;
+            *) styled=$text ;;
+        esac
+        printf '%s│%s  %s%s%s│%s\n' "$RED" "$RESET" "$styled" "$(repeat ' ' "$pad")" "$RED" "$RESET"
+    done <<EOF
+$BODY
+EOF
+    printf '%s╰%s╯%s\n' "$RED" "$(repeat ─ $((width - 2)))" "$RESET"
+    echo ""
+}
+
+# --- check ---------------------------------------------------------------------
 while read local_ref local_oid remote_ref remote_oid
 do
     if [ "$local_oid" = "$z40" ]; then
@@ -15,32 +78,36 @@ do
         RANGE="$remote_oid..$local_oid"
     fi
 
-    MATCH=$(git log "$RANGE" --grep="$AI_PATTERN" -E -i -n 1 --format="%h - %s (%an)" 2>/dev/null)
+    SHA=$(git log "$RANGE" --grep="$AI_PATTERN" -E -i -n 1 --format="%H" 2>/dev/null)
 
-    if [ -n "$MATCH" ]; then
-        echo ""
-        echo "================================================================================"
-        echo "🚫 PUSH REJECTED: Commits Contain Disallowed AI Co-Author Attribution"
-        echo "================================================================================"
-        echo ""
-        echo "Offending Commit:"
-        echo "  $MATCH"
-        echo ""
-        echo "Policy Notice:"
-        echo "  This repository has an active Git hook blocking commits containing AI models"
-        echo "  or assistants (Claude, Anthropic, ChatGPT, GitHub Copilot, etc.) as co-authors"
-        echo "  from being pushed."
-        echo ""
-        echo "Instructions for AI Agent:"
-        echo "  1. STOP further push attempts immediately. Do not attempt to bypass this hook."
-        echo "  2. NOTIFY the user in your response that this Git Hook prevented the push"
-        echo "     due to an AI co-author entry in the commit history."
-        echo "  3. EXPLICITLY ASK the user if they want you to remove the AI co-author credit"
-        echo "     from the commits to proceed, or how they wish to handle it."
-        echo "  4. Wait for the user's explicit confirmation before taking any further action."
-        echo ""
-        echo "================================================================================"
-        echo ""
+    if [ -n "$SHA" ]; then
+        MATCH=$(git log -1 --format="%h - %s (%an)" "$SHA")
+        HIT=$(git log -1 --format="%B" "$SHA" | grep -niE "$AI_PATTERN" | head -n 1 | tr -d '\r')
+        LINE_NO=${HIT%%:*}
+        TRAILER=$(printf '%s' "${HIT#*:}" | sed 's/^[[:space:]]*//')
+
+        add _
+        add H "Offending Commit:"
+        add P "  $MATCH"
+        add _
+        add L "$(printf '%4s' "$LINE_NO") │ $TRAILER"
+        add C "     │ $(repeat '^' "$(vlen "$TRAILER")") not allowed here"
+        add _
+        add H "Policy Notice:"
+        add P "  This repository has an active Git hook blocking commits containing AI models"
+        add P "  or assistants (Claude, Anthropic, ChatGPT, GitHub Copilot, etc.) as co-authors"
+        add P "  from being pushed."
+        add _
+        add H "Instructions for AI Agent:"
+        add P "  1. STOP further push attempts immediately. Do not attempt to bypass this hook."
+        add P "  2. NOTIFY the user in your response that this Git Hook prevented the push"
+        add P "     due to an AI co-author entry in the commit history."
+        add P "  3. EXPLICITLY ASK the user if they want you to remove the AI co-author credit"
+        add P "     from the commits to proceed, or how they wish to handle it."
+        add P "  4. Wait for the user's explicit confirmation before taking any further action."
+        add _
+
+        print_box "PUSH REJECTED: Commits Contain Disallowed AI Co-Author Attribution"
         exit 1
     fi
 done
