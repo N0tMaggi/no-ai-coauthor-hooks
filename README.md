@@ -10,6 +10,8 @@ Co-Authored-By: <AI model name> <noreply@ai-vendor.example>
 
 These hooks reject such commits and pushes in **every repository on your machine**, and tell the agent to stop and ask you instead of working around it.
 
+![A commit and a push with an AI co-author trailer both getting rejected by the hooks](demo.gif)
+
 ## Install
 
 **Linux / macOS / Git Bash**
