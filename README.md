@@ -1,6 +1,6 @@
 # no-ai-coauthor-hooks
 
-Global git hooks that **stop AI assistants from crediting themselves as co-authors** in your commits.
+Git hooks that **stop AI assistants from crediting themselves as co-authors** in your commits.
 
 Coding agents like Claude Code, GitHub Copilot or ChatGPT tend to append a trailer like this to every commit they make:
 
@@ -10,11 +10,11 @@ Co-Authored-By: <AI model name> <noreply@ai-vendor.example>
 
 These hooks reject such commits and pushes in **every repository on your machine** (or just the ones you choose), and tell the agent to stop and ask you instead of working around it.
 
-![A commit and a push with an AI co-author trailer both getting rejected by the hooks](demo.gif)
+![A commit and a push with an AI co-author trailer both getting rejected by the hooks](assets/demo.gif)
 
 ## Install
 
-![Installing the hooks for every repository, then for a single repository](install.gif)
+![Installing the hooks for every repository, then for a single repository](assets/install.gif)
 
 ### Every repository on your machine
 
