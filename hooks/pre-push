@@ -1,0 +1,48 @@
+#!/bin/sh
+
+z40=0000000000000000000000000000000000000000
+AI_PATTERN="^[[:space:]]*[Cc]o-[Aa]uthored-[Bb]y:[[:space:]]*.*(claude|anthropic|opus|sonnet|haiku|chatgpt|openai|copilot|gemini|deepseek|qwen)"
+
+while read local_ref local_oid remote_ref remote_oid
+do
+    if [ "$local_oid" = "$z40" ]; then
+        continue
+    fi
+
+    if [ "$remote_oid" = "$z40" ]; then
+        RANGE="$local_oid"
+    else
+        RANGE="$remote_oid..$local_oid"
+    fi
+
+    MATCH=$(git log "$RANGE" --grep="$AI_PATTERN" -E -i -n 1 --format="%h - %s (%an)" 2>/dev/null)
+
+    if [ -n "$MATCH" ]; then
+        echo ""
+        echo "================================================================================"
+        echo "🚫 PUSH REJECTED: Commits Contain Disallowed AI Co-Author Attribution"
+        echo "================================================================================"
+        echo ""
+        echo "Offending Commit:"
+        echo "  $MATCH"
+        echo ""
+        echo "Policy Notice:"
+        echo "  This repository has an active Git hook blocking commits containing AI models"
+        echo "  or assistants (Claude, Anthropic, ChatGPT, GitHub Copilot, etc.) as co-authors"
+        echo "  from being pushed."
+        echo ""
+        echo "Instructions for AI Agent:"
+        echo "  1. STOP further push attempts immediately. Do not attempt to bypass this hook."
+        echo "  2. NOTIFY the user in your response that this Git Hook prevented the push"
+        echo "     due to an AI co-author entry in the commit history."
+        echo "  3. EXPLICITLY ASK the user if they want you to remove the AI co-author credit"
+        echo "     from the commits to proceed, or how they wish to handle it."
+        echo "  4. Wait for the user's explicit confirmation before taking any further action."
+        echo ""
+        echo "================================================================================"
+        echo ""
+        exit 1
+    fi
+done
+
+exit 0

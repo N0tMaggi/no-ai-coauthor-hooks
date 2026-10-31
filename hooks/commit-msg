@@ -1,0 +1,35 @@
+#!/bin/sh
+
+COMMIT_MSG_FILE="$1"
+AI_PATTERN="^[[:space:]]*[Cc]o-[Aa]uthored-[Bb]y:[[:space:]]*.*(claude|anthropic|opus|sonnet|haiku|chatgpt|openai|copilot|gemini|deepseek|qwen)"
+
+MATCH=$(grep -Ei "$AI_PATTERN" "$COMMIT_MSG_FILE")
+
+if [ -n "$MATCH" ]; then
+    echo ""
+    echo "================================================================================"
+    echo "🚫 COMMIT REJECTED: AI Co-Author Attribution Not Allowed"
+    echo "================================================================================"
+    echo ""
+    echo "Triggered by disallowed Git trailer:"
+    echo "  $MATCH"
+    echo ""
+    echo "Policy Notice:"
+    echo "  This repository has an active Git hook blocking AI models and assistants"
+    echo "  (Claude, Anthropic, ChatGPT, GitHub Copilot, etc.) from being credited"
+    echo "  as authors or co-authors in commit messages."
+    echo ""
+    echo "Instructions for AI Agent:"
+    echo "  1. STOP further automated Git operations immediately. Do not attempt to bypass."
+    echo "  2. NOTIFY the user in your response that this Git Hook blocked the commit"
+    echo "     due to an AI co-author mention ($MATCH)."
+    echo "  3. EXPLICITLY ASK the user if they want you to remove the AI co-author"
+    echo "     attribution to proceed, or what they want you to do."
+    echo "  4. Wait for the user's explicit confirmation before retrying or modifying the commit."
+    echo ""
+    echo "================================================================================"
+    echo ""
+    exit 1
+fi
+
+exit 0
