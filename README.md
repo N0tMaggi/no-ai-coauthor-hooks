@@ -8,11 +8,15 @@ Coding agents like Claude Code, GitHub Copilot or ChatGPT tend to append a trail
 Co-Authored-By: <AI model name> <noreply@ai-vendor.example>
 ```
 
-These hooks reject such commits and pushes in **every repository on your machine**, and tell the agent to stop and ask you instead of working around it.
+These hooks reject such commits and pushes in **every repository on your machine** (or just the ones you choose), and tell the agent to stop and ask you instead of working around it.
 
 ![A commit and a push with an AI co-author trailer both getting rejected by the hooks](demo.gif)
 
 ## Install
+
+![Installing the hooks for every repository, then for a single repository](install.gif)
+
+### Every repository on your machine
 
 **Linux / macOS / Git Bash**
 
@@ -26,13 +30,30 @@ curl -fsSL https://raw.githubusercontent.com/N0tMaggi/no-ai-coauthor-hooks/main/
 irm https://raw.githubusercontent.com/N0tMaggi/no-ai-coauthor-hooks/main/install.ps1 | iex
 ```
 
-Both installers:
+This uses your existing global `core.hooksPath` (or creates `~/.git-hooks`), installs the two hooks there and sets `git config --global core.hooksPath`.
 
-1. use your existing global `core.hooksPath`, or create `~/.git-hooks`
-2. back up any existing `commit-msg` / `pre-push` hook there (`*.bak.<timestamp>`)
-3. install the two hooks and set `git config --global core.hooksPath`
+### Only the repository you're in
 
-Prefer reading before running? Clone the repo and run `./install.sh` or `.\install.ps1`; they then use the local files instead of downloading them.
+Run this inside the repository:
+
+**Linux / macOS / Git Bash**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/N0tMaggi/no-ai-coauthor-hooks/main/install.sh | sh -s -- --local
+```
+
+**Windows (PowerShell)**
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/N0tMaggi/no-ai-coauthor-hooks/main/install.ps1))) -Local
+```
+
+This installs the hooks into the repository's own hooks folder. If you also have a global `core.hooksPath`, git would ignore that folder, so the installer then sets `core.hooksPath` for this repository only.
+
+### Good to know
+
+- Existing `commit-msg` / `pre-push` hooks are backed up first (`*.bak.<timestamp>`); running the installer again just updates the hooks.
+- Prefer reading before running? Clone the repo and run `./install.sh [--local]` or `.\install.ps1 [-Local]`; they then use the local files instead of downloading them.
 
 ## What it does
 
@@ -53,12 +74,21 @@ When a hook blocks something, it prints instructions addressed to the AI agent: 
 
 ## Uninstall
 
+Global install:
+
 ```bash
 git config --global --unset core.hooksPath
 rm ~/.git-hooks/commit-msg ~/.git-hooks/pre-push
 ```
 
-On Windows: `git config --global --unset core.hooksPath` and delete the two files in `%USERPROFILE%\.git-hooks`.
+Single repository (run inside it):
+
+```bash
+git config --local --unset core.hooksPath
+rm .git/hooks/commit-msg .git/hooks/pre-push
+```
+
+On Windows, run the same `git config` command and delete the two files in `%USERPROFILE%\.git-hooks` or `.git\hooks`.
 
 ## License
 

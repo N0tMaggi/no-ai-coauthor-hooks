@@ -92,5 +92,7 @@ add P "     attribution to proceed, or what they want you to do."
 add P "  4. Wait for the user's explicit confirmation before retrying or modifying the commit."
 add _
 
-print_box "COMMIT REJECTED: AI Co-Author Attribution Not Allowed"
+# Printed in a subshell: if the output gets cut off (e.g. `git commit | head -1`),
+# SIGPIPE only kills the subshell and the commit is still rejected.
+( print_box "COMMIT REJECTED: AI Co-Author Attribution Not Allowed" ) 2>/dev/null
 exit 1

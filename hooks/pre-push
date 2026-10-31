@@ -107,7 +107,9 @@ do
         add P "  4. Wait for the user's explicit confirmation before taking any further action."
         add _
 
-        print_box "PUSH REJECTED: Commits Contain Disallowed AI Co-Author Attribution"
+        # Printed in a subshell: if the output gets cut off (e.g. `git push | head -1`),
+        # SIGPIPE only kills the subshell and the push is still rejected.
+        ( print_box "PUSH REJECTED: Commits Contain Disallowed AI Co-Author Attribution" ) 2>/dev/null
         exit 1
     fi
 done
